@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>UIT Student Expense Analytics - Hybrid MVT Dashboard (IE221)</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        :root {
+            --bg: #f8fafc;
+            --card: #ffffff;
+            --primary: #1d4ed8;
+            --danger: #dc2626;
+            --success: #16a34a;
+            --text: #0f172a;
+            --muted: #475569;
+            --border: #e2e8f0;
+        }
+        body {
+            font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            margin: 0;
+            padding: 24px;
+        }
+        .container { max-width: 1200px; margin: 0 auto; }
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: var(--card);
+            padding: 20px 24px;
+            border-radius: 12px;
+            border: 1px solid var(--border);
+            margin-bottom: 20px;
+        }
+        .grid-4 {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+            gap: 16px;
+            margin-bottom: 20px;
+        }
+        .card {
+            background: var(--card);
+            padding: 20px;
+            border-radius: 12px;
+            border: 1px solid var(--border);
+        }
+        .metric-label { font-size: 13px; color: var(--muted); text-transform: uppercase; font-weight: 600; }
+        .metric-value { font-size: 26px; font-weight: 700; margin-top: 8px; color: var(--primary); }
+        .badge {
+            display: inline-block;
+            padding: 4px 10px;
+            border-radius: 999px;
+            font-size: 12px;
+            font-weight: 600;
+            background: #dbeafe;
+            color: var(--primary);
+        }
+        .links a {
+            text-decoration: none;
+            padding: 8px 14px;
+            border-radius: 8px;
+            background: var(--primary);
+            color: white;
+            font-size: 14px;
+            font-weight: 600;
+            margin-left: 8px;
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+    <div class="header">
+        <div>
+            <span class="badge">ĐỒ ÁN IE221 - ĐH CÔNG NGHỆ THÔNG TIN (UIT)</span>
+            <h1 style="margin: 8px 0 4px 0; font-size: 22px;">Hệ thống Quản lý & Phân tích Dự báo Chi tiêu Sinh viên</h1>
+            {% if has_data %}
+            <p style="margin: 0; color: var(--muted);">
+                Sinh viên: <strong>{{ student.full_name }}</strong> ({{ student.email }}) | Khu vực: {{ student.dorm_area }}
+            </p>
+            {% endif %}
+        </div>
+        <div class="links">
+            <a href="/api/schema/swagger/">Swagger UI (30 APIs)</a>
+            <a href="/api/v1/analytics/export/?export_format=xlsx" style="background: #0f766e;">Xuất Excel</a>
+        </div>
+    </div>
+
+    {% if has_data %}
+    <div class="grid-4">
+        <div class="card">
+            <div class="metric-label">Tổng Số Dư Các Ví</div>
+            <div class="metric-value">{{ burn_report.current_balance|floatformat:0 }} đ</div>
+        </div>
+        <div class="card">
+            <div class="metric-label">Tốc Độ Đốt Tiền (HuberRegressor)</div>
+            <div class="metric-value" style="color: var(--danger);">{{ burn_report.daily_burn_rate|floatformat:0 }} đ/ngày</div>
+        </div>
+        <div class="card">
+            <div class="metric-label">Ngày Dự Kiến Cạn Ví</div>
+            <div class="metric-value">{{ burn_report.predicted_exhaustion_date|default:"An toàn" }}</div>
+        </div>
+        <div class="card">
+            <div class="metric-label">Điểm Sức Khỏe Tài Chính (ML)</div>
+            <div class="metric-value" style="color: var(--success);">
+                {{ health_report.financial_health_score }}/100 ({{ health_report.risk_level }})
+            </div>
+        </div>
+    </div>
+
+    <div class="card" style="margin-bottom: 20px;">
+        <h3 style="margin-top: 0;">Khuyến nghị từ Strategy Pattern ({{ health_report.saving_recommendation.title }})</h3>
+        <ul>
+            {% for item in health_report.saving_recommendation.action_items %}
+            <li>{{ item }}</li>
+            {% endfor %}
+        </ul>
+    </div>
+    {% else %}
+    <div class="card">
+        <p>Chưa có dữ liệu mẫu. Hãy chạy lệnh <code>python manage.py seed_data</code> để tạo 200 giao dịch sinh viên mẫu.</p>
+    </div>
+    {% endif %}
+</div>
+</body>
+</html>
+

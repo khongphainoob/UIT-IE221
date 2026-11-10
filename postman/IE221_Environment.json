@@ -1,0 +1,92 @@
+{
+  "id": "ie221-uit-student-expense-env",
+  "name": "IE221_Student_Expense_API_Local",
+  "values": [
+    {
+      "key": "base_url",
+      "value": "http://127.0.0.1:8000",
+      "type": "default",
+      "enabled": true
+    },
+    {
+      "key": "student_email",
+      "value": "22520001@gm.uit.edu.vn",
+      "type": "default",
+      "enabled": true
+    },
+    {
+      "key": "student_password",
+      "value": "Student@123",
+      "type": "secret",
+      "enabled": true
+    },
+    {
+      "key": "admin_email",
+      "value": "admin@uit.edu.vn",
+      "type": "default",
+      "enabled": true
+    },
+    {
+      "key": "admin_password",
+      "value": "Admin@123",
+      "type": "secret",
+      "enabled": true
+    },
+    {
+      "key": "access_token",
+      "value": "",
+      "type": "any",
+      "enabled": true
+    },
+    {
+      "key": "refresh_token",
+      "value": "",
+      "type": "any",
+      "enabled": true
+    },
+    {
+      "key": "wallet_id",
+      "value": "",
+      "type": "any",
+      "enabled": true
+    },
+    {
+      "key": "target_wallet_id",
+      "value": "",
+      "type": "any",
+      "enabled": true
+    },
+    {
+      "key": "category_id",
+      "value": "",
+      "type": "any",
+      "enabled": true
+    },
+    {
+      "key": "transaction_id",
+      "value": "",
+      "type": "any",
+      "enabled": true
+    },
+    {
+      "key": "bill_id",
+      "value": "",
+      "type": "any",
+      "enabled": true
+    },
+    {
+      "key": "budget_id",
+      "value": "",
+      "type": "any",
+      "enabled": true
+    },
+    {
+      "key": "alert_id",
+      "value": "",
+      "type": "any",
+      "enabled": true
+    }
+  ],
+  "_postman_variable_scope": "environment"
+}
+

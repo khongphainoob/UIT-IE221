@@ -1,0 +1,418 @@
+{
+  "info": {
+    "_postman_id": "ie221-uit-30-apis-collection",
+    "name": "IE221 - Student Expense Analytics API (30 RESTful APIs)",
+    "description": "Bộ Postman Collection 30 RESTful APIs chia theo 5 Module cho Đồ án IE221 (UIT). Tích hợp sẵn Test Scripts tự động lưu JWT Token và UUID giữa các request.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "auth": {
+    "type": "bearer",
+    "bearer": [
+      {
+        "key": "token",
+        "value": "{{access_token}}",
+        "type": "string"
+      }
+    ]
+  },
+  "item": [
+    {
+      "name": "Module 1 - Auth & User Management (6 APIs)",
+      "item": [
+        {
+          "name": "01. POST Register Student Account",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"22528888@gm.uit.edu.vn\",\n  \"student_code\": \"22528888\",\n  \"full_name\": \"Sinh Viên Test Postman\",\n  \"password\": \"Student@123\",\n  \"monthly_income_limit\": \"4500000.00\",\n  \"dorm_area\": \"KTX Khu B - ĐHQG TP.HCM\"\n}"
+            },
+            "url": "{{base_url}}/api/v1/auth/register/"
+          }
+        },
+        {
+          "name": "02. POST Login JWT (Auto-Save Token)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200', function () { pm.response.to.have.status(200); });",
+                  "var jsonData = pm.response.json();",
+                  "if (jsonData.access) {",
+                  "    pm.environment.set('access_token', jsonData.access);",
+                  "    pm.environment.set('refresh_token', jsonData.refresh);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{student_email}}\",\n  \"password\": \"{{student_password}}\"\n}"
+            },
+            "url": "{{base_url}}/api/v1/auth/login/"
+          }
+        },
+        {
+          "name": "03. POST Refresh JWT Access Token",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"refresh\": \"{{refresh_token}}\"\n}"
+            },
+            "url": "{{base_url}}/api/v1/auth/token/refresh/"
+          }
+        },
+        {
+          "name": "04. GET Current Student Profile (/users/me/)",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/api/v1/users/me/"
+          }
+        },
+        {
+          "name": "05. PATCH Update Monthly Allowance & Dorm Area",
+          "request": {
+            "method": "PATCH",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"monthly_income_limit\": \"4800000.00\",\n  \"dorm_area\": \"KTX Khu B - ĐHQG TP.HCM\"\n}"
+            },
+            "url": "{{base_url}}/api/v1/users/me/allowance/"
+          }
+        },
+        {
+          "name": "06. GET Admin System Users & Statistics",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/api/v1/admin/users/"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Module 2 - Wallets & Atomic Transfers (6 APIs)",
+      "item": [
+        {
+          "name": "07. GET List Student Wallets",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "var res = pm.response.json();",
+                  "if (res.data && res.data.length >= 2) {",
+                  "    pm.environment.set('wallet_id', res.data[0].id);",
+                  "    pm.environment.set('target_wallet_id', res.data[1].id);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/api/v1/wallets/"
+          }
+        },
+        {
+          "name": "08. POST Create New Wallet",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Ví Dự Phòng Học Tập\",\n  \"wallet_type\": \"OTHER\",\n  \"balance\": \"500000.00\"\n}"
+            },
+            "url": "{{base_url}}/api/v1/wallets/"
+          }
+        },
+        {
+          "name": "09. GET Wallet Detail by ID",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/api/v1/wallets/{{wallet_id}}/"
+          }
+        },
+        {
+          "name": "10. PUT Update Wallet Name",
+          "request": {
+            "method": "PUT",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Ví Tiền Mặt UIT\"\n}"
+            },
+            "url": "{{base_url}}/api/v1/wallets/{{wallet_id}}/"
+          }
+        },
+        {
+          "name": "11. POST Atomic Transfer Between Wallets",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"source_wallet_id\": \"{{wallet_id}}\",\n  \"target_wallet_id\": \"{{target_wallet_id}}\",\n  \"amount\": \"50000.00\",\n  \"note\": \"Chuyển tiền nội bộ sang MoMo\"\n}"
+            },
+            "url": "{{base_url}}/api/v1/wallets/transfer/"
+          }
+        },
+        {
+          "name": "12. DELETE Soft-Delete Wallet",
+          "request": {
+            "method": "DELETE",
+            "url": "{{base_url}}/api/v1/wallets/{{wallet_id}}/"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Module 3 - Categories, Transactions & Recurring Bills KTX (9 APIs)",
+      "item": [
+        {
+          "name": "13. GET List Expense/Income Categories",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "var res = pm.response.json();",
+                  "if (res.data && res.data.length > 0) {",
+                  "    pm.environment.set('category_id', res.data[0].id);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/api/v1/categories/"
+          }
+        },
+        {
+          "name": "14. POST Create Custom Expense Category",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Đồ án & Linh kiện IoT\",\n  \"category_type\": \"EXPENSE\",\n  \"is_essential\": true\n}"
+            },
+            "url": "{{base_url}}/api/v1/categories/"
+          }
+        },
+        {
+          "name": "15. POST Record Expense Transaction (Real-time Anomaly Check)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "var res = pm.response.json();",
+                  "if (res.data && res.data.id) {",
+                  "    pm.environment.set('transaction_id', res.data.id);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"wallet\": \"{{target_wallet_id}}\",\n  \"category\": \"{{category_id}}\",\n  \"transaction_type\": \"EXPENSE\",\n  \"amount\": \"35000.00\",\n  \"note\": \"Cơm trưa căn tin UIT\"\n}"
+            },
+            "url": "{{base_url}}/api/v1/transactions/"
+          }
+        },
+        {
+          "name": "16. GET Filter Transactions (By Date, Category, Amount, Anomaly)",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/api/v1/transactions/?min_amount=10000&max_amount=2000000"
+          }
+        },
+        {
+          "name": "17. PUT Update Transaction & Sync Wallet Balance",
+          "request": {
+            "method": "PUT",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"amount\": \"40000.00\",\n  \"note\": \"Cơm trưa căn tin UIT + Trà đá\"\n}"
+            },
+            "url": "{{base_url}}/api/v1/transactions/{{transaction_id}}/"
+          }
+        },
+        {
+          "name": "18. DELETE Soft-Delete Transaction & Refund Wallet",
+          "request": {
+            "method": "DELETE",
+            "url": "{{base_url}}/api/v1/transactions/{{transaction_id}}/"
+          }
+        },
+        {
+          "name": "19. GET List Recurring Bills KTX",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "var res = pm.response.json();",
+                  "if (res.data && res.data.length > 0) {",
+                  "    pm.environment.set('bill_id', res.data[0].id);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/api/v1/recurring-bills/"
+          }
+        },
+        {
+          "name": "20. POST Create Recurring Bill KTX",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"wallet\": \"{{target_wallet_id}}\",\n  \"category\": \"{{category_id}}\",\n  \"title\": \"Phí gửi xe tháng KTX Khu B\",\n  \"amount\": \"60000.00\",\n  \"due_day\": 5,\n  \"frequency\": \"MONTHLY\",\n  \"auto_deduct\": true\n}"
+            },
+            "url": "{{base_url}}/api/v1/recurring-bills/"
+          }
+        },
+        {
+          "name": "21. POST Pay Recurring Bill KTX Automatically",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"wallet_id\": \"{{target_wallet_id}}\"\n}"
+            },
+            "url": "{{base_url}}/api/v1/recurring-bills/{{bill_id}}/pay/"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Module 4 - Monthly Budgets & Alert Logs (5 APIs)",
+      "item": [
+        {
+          "name": "22. GET List Monthly Budgets & Usage Progress",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "var res = pm.response.json();",
+                  "if (res.data && res.data.length > 0) {",
+                  "    pm.environment.set('budget_id', res.data[0].id);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/api/v1/budgets/"
+          }
+        },
+        {
+          "name": "23. POST Create/Update Monthly Budget",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"category\": \"{{category_id}}\",\n  \"month\": 11,\n  \"year\": 2026,\n  \"allocated_amount\": \"2000000.00\",\n  \"alert_threshold_pct\": 80\n}"
+            },
+            "url": "{{base_url}}/api/v1/budgets/"
+          }
+        },
+        {
+          "name": "24. PUT Adjust Monthly Budget Allocation",
+          "request": {
+            "method": "PUT",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"allocated_amount\": \"2200000.00\"\n}"
+            },
+            "url": "{{base_url}}/api/v1/budgets/{{budget_id}}/"
+          }
+        },
+        {
+          "name": "25. POST Clone Previous Month Budgets",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"month\": 11,\n  \"year\": 2026\n}"
+            },
+            "url": "{{base_url}}/api/v1/budgets/clone-previous/"
+          }
+        },
+        {
+          "name": "26. GET Budget & Anomaly Alert Logs",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/api/v1/alerts/"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Module 5 - Analytics & ML Serving Engine (4+ APIs)",
+      "item": [
+        {
+          "name": "27. GET Burn-Rate Forecast (Pandas + HuberRegressor)",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/api/v1/analytics/burn-rate-forecast/"
+          }
+        },
+        {
+          "name": "28. POST Detect Anomalies (IsolationForest + Z-Score)",
+          "request": {
+            "method": "POST",
+            "url": "{{base_url}}/api/v1/analytics/detect-anomalies/"
+          }
+        },
+        {
+          "name": "29. GET Financial Health Score & RiskClassifier (RandomForest)",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/api/v1/analytics/financial-health/"
+          }
+        },
+        {
+          "name": "30. GET Export Monthly Report (Excel / CSV Strategy Pattern)",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/api/v1/analytics/export/?export_format=xlsx"
+          }
+        }
+      ]
+    }
+  ]
+}
+
