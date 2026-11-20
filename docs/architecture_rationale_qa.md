@@ -22,19 +22,24 @@ finance/
 
 ---
 
-## 2. Bản Chất Mô Hình MVT Của Dự Án (Câu Trả Lời Khi Thầy Hỏi *"Đây Là MVT Hay MVC?"*)
+## 2. Bản Chất Mô Hình MVT Của Dự Án (Câu Trả Lời Khi Thầy Hỏi *"Đây Là MVT Hay Service-Repository?"*)
 
 > [!IMPORTANT]
 > **Câu trả lời chuẩn để ghi điểm tuyệt đối với thầy**:
-> *"Dạ thưa thầy, dự án của nhóm tuân thủ đúng **100% kiến trúc MVT (Model - View - Template)** của Django, nhưng thay vì để mỗi chữ cái M - V - T chỉ là 1 file đơn lẻ, nhóm tiến hành **phân rã module (modularization) bên trong từng tầng M - V - T** theo đúng tinh thần của Django đối với hệ thống quy mô 30 APIs."*
+> *"Dạ thưa thầy, dự án của nhóm tuân thủ đúng chuẩn lý thuyết **MVT (Model - View - Template)** của Django cho cả luồng Web lẫn REST API, **đồng thời mở rộng thêm 3 tầng trung gian (`services/`, `repositories/`, `engines/`) nằm giữa `View [V]` và `Model [M]`**. Nhóm **không gộp** `Service`, `Repository` hay `ML Engine` vào `Model [M]`: `Model` giữ đúng vai trò định nghĩa cấu trúc CSDL & ORM, `View` làm trung tâm điều phối (Controller), `Template / Serializer (.data)` chỉ trình bày đầu ra, còn các tầng mở rộng giúp tách nghiệp vụ phức tạp ra khỏi View để tránh phình to `views.py` (Fat Views)."*
 
-Cụ thể sự ánh xạ 1:1 vào **M - V - T** như sau:
+Cụ thể sự ánh xạ chuẩn xác từng thành phần như sau:
 
-| Thành phần MVT trong Django | Thư mục tương ứng trong Dự án | Giải thích vai trò đúng chuẩn Django |
+| Thành phần Kiến trúc | Thư mục tương ứng trong Dự án | Vai trò đúng chuẩn lý thuyết Django MVT & Clean Architecture |
 | :--- | :--- | :--- |
-| **M — Model Layer**<br>*(Tầng Dữ liệu, Truy xuất & Nghiệp vụ lõi)* | `models/`<br>`repositories/`<br>`services/`<br>`engines/` | Trong triết lý của Django ("Fat Models, Thin Views"), tầng **Model** không chỉ là khai báo cột CSDL mà bao hàm toàn bộ quy tắc dữ liệu và nghiệp vụ. Nhóm tách tầng **M** thành 4 gói nhỏ:<br>• `models/`: Định nghĩa cấu trúc 7 bảng chuẩn 3NF & ràng buộc toàn vẹn (`CheckConstraint`).<br>• `repositories/`: Đóng gói câu lệnh truy vấn ORM (`select_related`, `select_for_update`, `aggregate`).<br>• `services/`: Điều phối quy tắc nghiệp vụ tài chính & giao dịch nguyên tử `@transaction.atomic`.<br>• `engines/`: Xử lý chuỗi thời gian Pandas & suy luận mô hình học máy Scikit-learn. |
-| **V — View Layer**<br>*(Tầng Điều phối / Controller)* | `views/`<br>`config/urls.py`<br>`apps/finance/urls.py` | Trong Django, **View** đóng vai trò là bộ điều phối (tương đương Controller trong MVC): Nhận HTTP Request từ `urls.py`, kiểm tra quyền truy cập (`permissions.py`), gọi xuống tầng **Model** (`services/` & `engines/`) để xử lý và chọn cách trả dữ liệu về cho Client. **View tuyệt đối mỏng (Thin Views)**, không tự tính toán tiền hay viết câu lệnh ORM phức tạp. |
-| **T — Template Layer**<br>*(Tầng Hiển thị / Biểu diễn dữ liệu)* | `serializers/`<br>`templates/finance/` | Trong kiến trúc Hybrid MVT + RESTful API:<br>• Với Web trực quan (`/dashboard/`): Tầng **T** chính là file HTML `templates/finance/dashboard.html` nhúng biểu đồ Chart.js.<br>• Với 30 RESTful APIs (`/api/v1/...`): Tầng **T** chính là `serializers/` (đóng vai trò định dạng và trình bày dữ liệu đầu ra thành cấu trúc JSON chuẩn cho Client). |
+| **M — Model Layer**<br>*(Thuần Dữ liệu & ORM)* | `apps/finance/models/`<br>`core/models.py` | Đúng chuẩn MVT: **chỉ định nghĩa cấu trúc dữ liệu (7 bảng 3NF)**, trường/kiểu dữ liệu, khóa ngoại FK, ràng buộc toàn vẹn (`CheckConstraint`, `UniqueConstraint`) và lớp giao tiếp Django ORM kế thừa `BaseModel`. **Không chứa** Service nghiệp vụ hay ML Engine. |
+| **V — View Layer**<br>*(Trung tâm Điều phối — giống Controller trong MVC)* | `apps/finance/views/`<br>`config/urls.py`<br>`apps/finance/urls.py`<br>`core/permissions.py` | Tiếp nhận HTTP Request từ `urls.py`, kiểm tra quyền RBAC (`IsAdmin`, `IsStudentOwner`), lọc & kiểm tra đầu vào API bằng `Serializer.is_valid()`, ủy quyền xử lý sang Tầng Mở Rộng (`Service`) để tương tác với `Model [M]`, nhận đối tượng Python trả về rồi đẩy sang **Template / Serializer (`[T]`)** tạo HTTP Response. |
+| **T — Template Layer**<br>*(Tầng Hiển thị / Biểu diễn đầu ra)* | `templates/finance/`<br>`serializers/` *(chiều `.data` + `JSONRenderer`)* | Quyết định cách dữ liệu được trình bày cho người dùng cuối ở **Chiều RA**:<br>• **Với Web MVT (`/dashboard/`)**: File `templates/finance/dashboard.html` kết hợp HTML + Django Template Language (DTL) + Chart.js kết xuất trang web.<br>• **Với REST API (`/api/v1/...`)**: DRF thay HTML Template bằng `Serializer.data` + `JSONRenderer` để kết xuất đối tượng Python thành chuỗi JSON. |
+| **Tầng Mở Rộng (Extended Layers)**<br>*(Nằm giữa `[V]` và `[M]`, tách biệt để chống Fat Views)* | `apps/finance/services/`<br>`apps/finance/repositories/`<br>`apps/finance/engines/` | Tách khỏi `View [V]` và giữ tách biệt hoàn toàn với `Model [M]`:<br>• `services/`: Xử lý nghiệp vụ tài chính & giao dịch nguyên tử `@transaction.atomic`.<br>• `repositories/`: Đóng gói câu lệnh ORM truy xuất `Model [M]` (`select_related`, `select_for_update`).<br>• `engines/`: Phân tích chuỗi thời gian Pandas & suy luận ML/DL nạp sẵn từ `.joblib` (`MLModelRegistry` Singleton). |
+
+### Phân biệt nhanh: Tại sao `Service`, `Repository`, `Engine` KHÔNG phải `View`/`Controller` và KHÔNG gộp vào `Model`?
+- **Logic điều phối HTTP (Controller / Presentation Logic → thuộc `View [V]`)**: Chỉ xử lý các việc gắn với giao thức Web/HTTP như nhận `HttpRequest`, kiểm tra RBAC (`IsStudentOwner`, `IsAdmin`), lọc payload (`Serializer.is_valid()`), quyết định HTTP status (`200/201/400/403/404`), rồi chuyển dữ liệu sang `[T]` (`Template` hoặc `Serializer.data`).
+- **Logic nghiệp vụ, tính toán AI & truy xuất dữ liệu (Business / AI / ORM Logic → thuộc `Service`, `Engine`, `Repository`)**: Hoàn toàn **độc lập với HTTP** (không nhận `HttpRequest`, không trả `HttpResponse` — dùng chung được cho REST API, Web View, lệnh CLI `manage.py` hay Unit Test `pytest`). Xem minh họa trực quan kèm 7 sơ đồ chi tiết tại [`class_diagram_business_walkthrough.md`](class_diagram_business_walkthrough.md).
 
 ---
 
@@ -99,10 +104,12 @@ Bên trong `apps/finance/` được chia thành 7 thư mục con tương ứng v
    - **`exporters.py`**: Áp dụng **Strategy Pattern (`BaseReportExporter`)** với 2 lớp con `CSVReportExporter` và `ExcelReportExporter` cùng ghi đè phương thức đa hình `generate()`.
 
 5. **`apps/finance/serializers/` (5 file theo đúng 5 phân hệ)**:
-   - Đóng vai trò là tầng **Template JSON** trong kiến trúc REST: Kiểm tra tính hợp lệ của dữ liệu đầu vào (số tiền $> 0$, đúng định dạng UUID) và chuyển đổi đối tượng Model/Dictionary sang JSON trả về cho người dùng.
+   - Thực hiện 2 nhiệm vụ tách biệt theo 2 chiều Request–Response của DRF:
+     - **Chiều VÀO (`is_valid()`)**: Hỗ trợ `View [V]` kiểm tra tính hợp lệ của dữ liệu đầu vào từ Client (số tiền $> 0$, đúng định dạng UUID).
+     - **Chiều RA (`.data`)**: Thay thế HTML Template (`T`) trong kiến trúc REST API để chuyển đổi đối tượng Python (`Model` / `dict`) sang JSON trả về cho Client.
 
-6. **`apps/finance/views/` (5 file `*_views.py` cho 30 APIs + 1 file `web_views.py` cho Web Dashboard)**:
-   - Các lớp `APIView` cực kỳ ngắn gọn (chỉ từ 10–15 dòng mỗi hàm): nhận Request $\rightarrow$ gọi Serializer $\rightarrow$ gọi Service/Engine $\rightarrow$ trả Response.
+6. **`apps/finance/views/` (5 file `*_views.py` cho 30+ APIs + 1 file `web_views.py` cho Web Dashboard)**:
+   - Các lớp `View` / `APIView` cực kỳ ngắn gọn, làm đúng vai trò điều phối (Controller trong MVT): nhận HTTP Request từ `urls.py` → kiểm tra input (`Serializer.is_valid()`) → ủy quyền Tầng Mở Rộng (`Service` / `Engine`) lấy/xử lý dữ liệu từ `Model` → truyền đối tượng qua `Serializer.data` hoặc `templates/finance/dashboard.html` → trả HTTP Response.
    - Gắn đầy đủ `@extend_schema` để tự động sinh tài liệu OpenAPI 3 / Swagger UI chuẩn xác.
 
 7. **`apps/finance/management/commands/seed_data.py`**:
