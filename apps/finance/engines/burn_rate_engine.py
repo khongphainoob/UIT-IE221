@@ -1,7 +1,8 @@
 """
 1. Burn-Rate Forecasting Engine (Dự báo tốc độ đốt tiền & ngày cạn ví).
-Uses Pandas `.resample('D').sum()`, 7-day rolling moving average (`rolling(7).mean()`),
-and Scikit-learn `HuberRegressor` (outlier-resistant against KTX rent spikes) + `LinearRegression`.
+Uses Pandas `.resample('D').sum()` and 7-day rolling moving average (`rolling(7).mean()`)
+for feature extraction, then runs real-time inference via pre-trained `burn_rate_huber`
+loaded from `MLModelRegistry` (Singleton Pattern).
 """
 import calendar
 from datetime import date, timedelta
@@ -9,14 +10,15 @@ from decimal import Decimal
 from typing import Any, Dict, List, Optional
 import numpy as np
 import pandas as pd
-from sklearn.linear_model import HuberRegressor, LinearRegression
 from apps.finance.engines.base_analyzer import BaseFinancialAnalyzer
+from apps.finance.engines.model_registry import MLModelRegistry
 
 
 class BurnRateAnalyzer(BaseFinancialAnalyzer):
     """
     Module Ăn Điểm 1: Smart Burn-Rate Forecaster (`BurnRateAnalyzer` / `BurnRateForecaster`).
     Đóng gói thuộc tính nội bộ: `_daily_burn_rate`, `_safety_threshold`, `_current_balance`.
+    Chỉ thực hiện Feature Extraction (Pandas) + Real-time Inference (`.predict()`) qua `MLModelRegistry`.
     """
 
     def __init__(
@@ -35,7 +37,7 @@ class BurnRateAnalyzer(BaseFinancialAnalyzer):
 
     @property
     def daily_burn_rate(self) -> float:
-        """Read-only property trả về tốc độ tiêu tiền trung bình/ngày đã tính toán."""
+        """Read-only property trả về tốc độ tiêu tiền trung bình/ngày đã suy luận."""
         return round(self._daily_burn_rate, 2)
 
     @property
@@ -46,7 +48,7 @@ class BurnRateAnalyzer(BaseFinancialAnalyzer):
     def preprocess(self) -> pd.DataFrame:
         """
         Chuẩn hóa danh sách giao dịch sang chuỗi thời gian theo ngày (`.resample('D').sum()`)
-        và tính cột trung bình trượt 7 ngày (`rolling_7d_avg`).
+        và trích xuất đặc trưng trung bình trượt 7 ngày (`rolling_7d_avg`).
         """
         if not self._raw_data:
             self._dataframe = pd.DataFrame(
@@ -87,10 +89,10 @@ class BurnRateAnalyzer(BaseFinancialAnalyzer):
 
     def execute_analysis(self) -> Dict[str, Any]:
         """
-        Khớp đường xu hướng bằng Scikit-learn `HuberRegressor` (kháng nhiễu khoản chi đầu tháng)
-        kết hợp `LinearRegression` và trung bình trượt 7 ngày:
-        - `daily_burn_rate` / `average_daily_burn`
-        - `rolling_7d_burn_rate`
+        Suy luận thời gian thực (Real-time Inference):
+        Nạp pre-trained `burn_rate_huber` từ `MLModelRegistry` (Singleton) và gọi `.predict()`
+        trên vector đặc trưng `[avg_daily_burn, rolling_7d_burn]` để dự báo:
+        - `daily_burn_rate`
         - `predicted_exhaustion_date`
         - `days_until_exhaustion`
         - `safe_daily_allowance` / `recommended_daily_limit`
@@ -126,30 +128,13 @@ class BurnRateAnalyzer(BaseFinancialAnalyzer):
         avg_daily_burn = float(self._daily_series["amount"].mean())
         rolling_7d_burn = float(self._daily_series["rolling_7d_avg"].iloc[-1])
 
-        n_days = len(self._daily_series)
-        X = np.arange(n_days, dtype=float).reshape(-1, 1)
-        y_cum_spent = self._daily_series["cumulative_spent"].values.astype(float)
-
-        if n_days >= 3:
-            try:
-                huber = HuberRegressor(max_iter=200, alpha=1.35)
-                huber.fit(X, y_cum_spent)
-                regression_slope = float(max(huber.coef_[0], 0.0))
-            except Exception:
-                lr = LinearRegression()
-                lr.fit(X, y_cum_spent)
-                regression_slope = float(max(lr.coef_[0], 0.0))
-        elif n_days == 2:
-            lr = LinearRegression()
-            lr.fit(X, y_cum_spent)
-            regression_slope = float(max(lr.coef_[0], 0.0))
-        else:
-            regression_slope = avg_daily_burn
+        # Load pre-trained HuberRegressor via Singleton MLModelRegistry & run inference (.predict)
+        huber_model = MLModelRegistry.get_instance().get_model("burn_rate_huber")
+        feature_vector = np.array([[avg_daily_burn, rolling_7d_burn]], dtype=float)
+        predicted_burn = float(max(huber_model.predict(feature_vector)[0], 0.0))
 
         effective_daily_burn = (
-            0.6 * regression_slope + 0.4 * rolling_7d_burn
-            if regression_slope > 0
-            else avg_daily_burn
+            predicted_burn if predicted_burn > 0 else avg_daily_burn
         )
         self._daily_burn_rate = effective_daily_burn
 
@@ -179,7 +164,7 @@ class BurnRateAnalyzer(BaseFinancialAnalyzer):
             "daily_burn_rate": round(effective_daily_burn, 2),
             "average_daily_burn": round(avg_daily_burn, 2),
             "rolling_7d_burn_rate": round(rolling_7d_burn, 2),
-            "regression_daily_slope": round(regression_slope, 2),
+            "regression_daily_slope": round(predicted_burn, 2),
             "effective_daily_burn": round(effective_daily_burn, 2),
             "days_until_exhaustion": days_left,
             "predicted_exhaustion_date": predicted_date,
