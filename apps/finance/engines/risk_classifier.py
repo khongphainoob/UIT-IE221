@@ -146,9 +146,10 @@ class RiskClassifier(BaseFinancialAnalyzer):
             float(df["is_anomaly"].sum()) / len(df) if not df.empty else 0.0
         )
 
-        # Inference qua Singleton MLModelRegistry (RandomForestClassifier)
+        # Inference qua Singleton MLModelRegistry (Ensemble: RandomForestClassifier + Deep Learning MLPClassifier)
         registry = MLModelRegistry.get_instance()
         rf_model = registry.get_model("risk_rf_classifier")
+        mlp_model = registry.get_model("deep_mlp_risk")
         feature_vector = np.array(
             [
                 [
@@ -160,8 +161,10 @@ class RiskClassifier(BaseFinancialAnalyzer):
             ],
             dtype=float,
         )
-        pred_class = int(rf_model.predict(feature_vector)[0])
-        proba = rf_model.predict_proba(feature_vector)[0]
+        rf_proba = rf_model.predict_proba(feature_vector)[0]
+        mlp_proba = mlp_model.predict_proba(feature_vector)[0]
+        proba = 0.5 * rf_proba + 0.5 * mlp_proba
+        pred_class = int(np.argmax(proba))
         risk_label = self.RISK_LABELS.get(pred_class, "WARNING")
 
         # Tính điểm sức khỏe tài chính (Financial Health Score: 0 - 100)

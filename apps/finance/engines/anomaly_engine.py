@@ -1,23 +1,23 @@
 """
 2. Anomaly Detection Engine (Phát hiện giao dịch chi tiêu bất thường).
-Combines Scikit-learn `IsolationForest` with statistical Z-Score (mu + 2.5*sigma) and IQR.
+Loads pre-trained `IsolationForest` via `MLModelRegistry` (Singleton) for real-time inference,
+combined with statistical Z-Score (mu + 2.5*sigma) and IQR.
 Inherits from BaseFinancialAnalyzer(ABC).
 """
 from decimal import Decimal
 from typing import Any, Dict, List, Tuple
 import numpy as np
 import pandas as pd
-from sklearn.ensemble import IsolationForest
 from apps.finance.engines.base_analyzer import BaseFinancialAnalyzer
+from apps.finance.engines.model_registry import MLModelRegistry
 
 
 class AnomalyDetectionEngine(BaseFinancialAnalyzer):
     """
     Module Ăn Điểm 2: Spending Anomaly Detector (`AnomalyDetectionEngine` / `SpendingAnomalyDetector`).
-    Kết hợp:
-    - Scikit-learn `IsolationForest`
-    - Kiểm định thống kê Z-Score (`z_score >= 2.5`)
-    - Khoảng tứ phân vị IQR (`amount > Q3 + 1.5 * IQR`)
+    Chỉ thực hiện Suy luận thời gian thực (Real-time Inference):
+    - Nạp pre-trained `IsolationForest` từ `MLModelRegistry` (Singleton) và gọi `.predict()`.
+    - Kết hợp kiểm định thống kê Z-Score (`z_score >= 2.5`) và Khoảng tứ phân vị IQR (`amount > Q3 + 1.5 * IQR`).
     """
 
     def __init__(
@@ -76,19 +76,16 @@ class AnomalyDetectionEngine(BaseFinancialAnalyzer):
         else:
             df["z_score"] = 0.0
 
-        # IsolationForest inference when sample size >= 10
-        if len(df) >= 10:
-            iforest = IsolationForest(
-                n_estimators=50, contamination=0.05, random_state=221
-            )
-            preds = iforest.fit_predict(amounts.reshape(-1, 1))
-            df["is_iforest_anomaly"] = (preds == -1) & (df["amount"] > mean_val)
-        else:
-            df["is_iforest_anomaly"] = False
+        # Real-time inference using pre-trained IsolationForest loaded via Singleton MLModelRegistry
+        iforest = MLModelRegistry.get_instance().get_model("anomaly_iforest")
+        preds = iforest.predict(amounts.reshape(-1, 1))
+        df["is_iforest_anomaly"] = (preds == -1) & (df["amount"] > iqr_upper_bound)
 
         df["is_z_anomaly"] = df["z_score"] >= self._z_threshold
         df["is_iqr_anomaly"] = (iqr > 0) & (df["amount"] > iqr_upper_bound)
-        df["detected_anomaly"] = df["is_z_anomaly"] | df["is_iqr_anomaly"]
+        df["detected_anomaly"] = (
+            df["is_z_anomaly"] | df["is_iqr_anomaly"] | df["is_iforest_anomaly"]
+        )
 
         anomalies_df = df[df["detected_anomaly"]].sort_values(
             by="amount", ascending=False
@@ -146,8 +143,15 @@ class AnomalyDetectionEngine(BaseFinancialAnalyzer):
         iqr_upper = q3 + self._iqr_multiplier * iqr
 
         z_score = (amount_val - mean_val) / std_val if std_val > 0 else 0.0
-        is_anomaly = (z_score >= self._z_threshold) or (
-            iqr > 0 and amount_val > iqr_upper
+        iforest = MLModelRegistry.get_instance().get_model("anomaly_iforest")
+        iforest_flag = bool(
+            iforest.predict(np.array([[amount_val]], dtype=float))[0] == -1
+            and amount_val > iqr_upper
+        )
+        is_anomaly = (
+            (z_score >= self._z_threshold)
+            or (iqr > 0 and amount_val > iqr_upper)
+            or iforest_flag
         )
         return bool(is_anomaly), round(float(z_score), 2)
 
