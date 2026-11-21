@@ -13,16 +13,28 @@ class StudentDashboardTemplateView(TemplateView):
     """
     [V - VIEW / T - TEMPLATE HTML] Render trang Web Dashboard trực quan (Chart.js)
     minh họa chuẩn mô hình Hybrid MVT của Django cho buổi bảo vệ Đồ án IE221.
+    Hỗ trợ chọn sinh viên qua query `?student=24520001` (mặc định ưu tiên 24520001@gm.uit.edu.vn).
     """
 
     template_name = "finance/dashboard.html"
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        student = (
-            UserAccount.objects.filter(role=UserAccount.Role.STUDENT).first()
-            or UserAccount.objects.first()
-        )
+        requested_code = self.request.GET.get("student", "").strip()
+        student = None
+        if requested_code:
+            student = (
+                UserAccount.objects.filter(student_code=requested_code).first()
+                or UserAccount.objects.filter(email=requested_code).first()
+            )
+        if not student:
+            student = (
+                UserAccount.objects.filter(email="24520001@gm.uit.edu.vn").first()
+                or UserAccount.objects.filter(role=UserAccount.Role.STUDENT)
+                .order_by("email")
+                .first()
+                or UserAccount.objects.order_by("email").first()
+            )
         if not student:
             context["has_data"] = False
             return context
@@ -55,4 +67,3 @@ class StudentDashboardTemplateView(TemplateView):
             }
         )
         return context
-
