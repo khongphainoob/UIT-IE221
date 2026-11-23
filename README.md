@@ -149,7 +149,7 @@ UIT-IE221/ (Thư mục gốc ĐỒ ÁN)
 # 1. Khởi động container PostgreSQL 16 (student_expense_db trên cổng 5433)
 docker compose up -d db
 
-# 2. Chạy Migration, Seed 200 giao dịch mẫu & Run Server ngay tại thư mục gốc
+# 2. Chạy Migration, Seed bộ dữ liệu Khóa 2024 UIT (1.025 giao dịch / 6 SV 2452xxxx) & Run Server
 .\.venv\Scripts\python.exe manage.py migrate
 .\.venv\Scripts\python.exe manage.py seed_data
 .\.venv\Scripts\python.exe manage.py runserver
@@ -162,18 +162,23 @@ docker compose up -d db
 .\.venv\Scripts\python.exe manage.py runserver
 ```
 
-### Kiểm thử Tự động (20 Kịch bản Pytest)
+> **Tùy chọn chạy lại / reset dữ liệu demo (`seed_data`) & Dataset CSV**:
+> - Lệnh `seed_data` đồng bộ file dataset chuẩn [`data/uit_student_expenses_dataset.csv`](data/uit_student_expenses_dataset.csv) (**1.025 giao dịch** của 6 sinh viên Khóa 2024 `24520001`..`24520006` trong 60 ngày, trong đó SV chính `24520001@gm.uit.edu.vn` có **200 giao dịch**) và hỗ trợ **idempotent** (chạy lặp lại không tạo dữ liệu trùng).
+> - Truyền `--reset` nếu muốn làm sạch và sinh lại bộ dữ liệu mẫu: `.\.venv\Scripts\python.exe manage.py seed_data --reset --days 60 --count 200 --seed 221`.
+> - Có thể đổi mật khẩu demo qua biến môi trường `SEED_DEMO_ADMIN_PASSWORD` và `SEED_DEMO_STUDENT_PASSWORD` (không commit `.env` chứa secrets thật lên Git). Xem chi tiết tại [`docs/seed_data_guide.md`](docs/seed_data_guide.md).
+
+### Kiểm thử Tự động (Pytest)
 ```powershell
 .\.venv\Scripts\pytest.exe -v
 ```
 
 ### Các Đường dẫn Truy cập khi Server chạy:
 - **Swagger UI (30+ RESTful APIs)**: http://127.0.0.1:8000/api/schema/swagger/
-- **Hybrid MVT Web Dashboard (Chart.js)**: http://127.0.0.1:8000/dashboard/
+- **Hybrid MVT Web Dashboard (Chart.js)**: http://127.0.0.1:8000/dashboard/ *(hỗ trợ `?student=24520001` .. `?student=24520006`)*
 - **ReDoc**: http://127.0.0.1:8000/api/schema/redoc/
-- **Tài khoản Demo sau khi chạy `seed_data`**:
-  - Sinh viên UIT: `22520001@gm.uit.edu.vn` / Mật khẩu: `Student@123`
-  - Quản trị viên (Admin): `admin@uit.edu.vn` / Mật khẩu: `Admin@123`
+- **Tài khoản Demo nội bộ sau khi chạy `seed_data`** *(chỉ dùng cho môi trường dev/demo)*:
+  - Sinh viên UIT (`STUDENT` - 6 hồ sơ Khóa 2024): `24520001@gm.uit.edu.vn` (đến `24520006@gm.uit.edu.vn`) / Mật khẩu mặc định: `Student@123`
+  - Quản trị viên (`ADMIN`): `admin@uit.edu.vn` / Mật khẩu mặc định: `Admin@123`
 
 ---
 

@@ -21,6 +21,7 @@ Tài liệu đặc tả yêu cầu, sơ đồ thiết kế (Draw.io / PNG / PDF)
 | **[`class_diagram_business_walkthrough.md`](class_diagram_business_walkthrough.md)** | Giải thích chi tiết từng trang sơ đồ Class (4 trang), ERD 7 bảng 3NF, FDD 22 chức năng, Use Case và câu hỏi phân biệt `View` / `Controller` vs `Service` / `Repository` / `Engine`. |
 | **[`architecture_rationale_qa.md`](architecture_rationale_qa.md)** | Giải thích cấu trúc thư mục dự án, ánh xạ chuẩn Django MVT + Extended Layers, phân tích ưu/nhược điểm (trade-offs) và cẩm nang trả lời vấn đáp. |
 | **[`functional_requirements_srs.md`](functional_requirements_srs.md)** | Đặc tả phạm vi đề tài, 2 tác nhân (`STUDENT`, `ADMIN`) và danh mục 5 phân hệ – 22 chức năng (`FR-01` → `FR-22`) cùng 3 bài toán ML/DL Serving. |
+| **[`seed_data_guide.md`](seed_data_guide.md)** | Kết quả khảo sát bộ dữ liệu mẫu (Kaggle/GitHub), cấu trúc 180 giao dịch / 60 ngày và hướng dẫn chạy `manage.py seed_data` (`--reset`, idempotent). |
 | **[`core_usage_guide.md`](core_usage_guide.md)** | Hướng dẫn sử dụng tầng nền tảng dùng chung `core/` (`BaseModel`, `BaseRepository<T>`, `APIResponse`, `exceptions.py`, `permissions.py`). |
 | **[`uml_templates.md`](uml_templates.md)** | Mô tả văn bản chuẩn hóa UML & danh sách lớp tham chiếu cho StarUML / báo cáo Word. |
 | **[`report_draft_ie221.md`](report_draft_ie221.md)** | Khung nội dung dự thảo báo cáo đồ án môn học IE221. |
