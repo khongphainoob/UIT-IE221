@@ -14,7 +14,7 @@ from apps.finance.serializers import (
     UserAllowanceUpdateSerializer,
     UserProfileSerializer,
 )
-from core.exceptions import ResourceNotFoundException
+from core.exceptions import AccessDeniedException, ResourceNotFoundException
 from core.permissions import IsAdmin
 
 
@@ -145,6 +145,10 @@ class AdminUserToggleStatusAPIView(APIView):
         if not target_user:
             raise ResourceNotFoundException(
                 f"Không tìm thấy người dùng với ID={user_id}."
+            )
+        if target_user.role != UserAccount.Role.STUDENT:
+            raise AccessDeniedException(
+                "API này chỉ cho phép khóa hoặc mở khóa tài khoản sinh viên."
             )
         target_user.is_active = not target_user.is_active
         target_user.save(update_fields=["is_active", "updated_at"])
