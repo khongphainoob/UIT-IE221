@@ -1,8 +1,7 @@
 """
 Module 1 (auth_iam): Authentication, Student Profile, Allowance Config & Admin User Management APIViews.
 """
-from django.db.models import Count, Sum
-from drf_spectacular.types import OpenApiTypes
+from django.db.models import Sum
 from drf_spectacular.utils import extend_schema
 from rest_framework import status
 from rest_framework.permissions import AllowAny, IsAuthenticated
@@ -14,7 +13,13 @@ from apps.finance.serializers import (
     UserAllowanceUpdateSerializer,
     UserProfileSerializer,
 )
-from core.exceptions import ResourceNotFoundException
+from apps.finance.serializers.auth_serializers import (
+    AdminUsersResponseSerializer,
+    ProfileResponseSerializer,
+    RegistrationResponseSerializer,
+)
+from core.exceptions import AccessDeniedException, ResourceNotFoundException
+from core.openapi_contract import APIErrorSerializer
 from core.permissions import IsAdmin
 
 
@@ -25,7 +30,7 @@ class StudentRegistrationAPIView(APIView):
 
     @extend_schema(
         request=StudentRegistrationSerializer,
-        responses={201: StudentRegistrationSerializer},
+        responses={201: RegistrationResponseSerializer, 400: APIErrorSerializer},
         tags=["1. Auth & User Management"],
         summary="Đăng ký tài khoản sinh viên UIT",
     )
@@ -48,7 +53,7 @@ class UserProfileAPIView(APIView):
     permission_classes = [IsAuthenticated]
 
     @extend_schema(
-        responses={200: UserProfileSerializer},
+        responses={200: ProfileResponseSerializer, 401: APIErrorSerializer},
         tags=["1. Auth & User Management"],
         summary="Xem hồ sơ người dùng hiện tại",
     )
@@ -58,7 +63,11 @@ class UserProfileAPIView(APIView):
 
     @extend_schema(
         request=UserProfileSerializer,
-        responses={200: UserProfileSerializer},
+        responses={
+            200: ProfileResponseSerializer,
+            400: APIErrorSerializer,
+            401: APIErrorSerializer,
+        },
         tags=["1. Auth & User Management"],
         summary="Cập nhật hồ sơ cá nhân",
     )
@@ -78,7 +87,11 @@ class UserAllowanceUpdateAPIView(APIView):
 
     @extend_schema(
         request=UserAllowanceUpdateSerializer,
-        responses={200: UserProfileSerializer},
+        responses={
+            200: ProfileResponseSerializer,
+            400: APIErrorSerializer,
+            401: APIErrorSerializer,
+        },
         tags=["1. Auth & User Management"],
         summary="Cập nhật trợ cấp hàng tháng & khu vực KTX",
     )
@@ -100,7 +113,11 @@ class AdminUserManagementAPIView(APIView):
     permission_classes = [IsAdmin]
 
     @extend_schema(
-        responses={200: OpenApiTypes.OBJECT},
+        responses={
+            200: AdminUsersResponseSerializer,
+            401: APIErrorSerializer,
+            403: APIErrorSerializer,
+        },
         tags=["1. Auth & User Management"],
         summary="[ADMIN] Danh sách người dùng & thống kê toàn hệ thống",
     )
@@ -136,7 +153,12 @@ class AdminUserToggleStatusAPIView(APIView):
 
     @extend_schema(
         request=None,
-        responses={200: UserProfileSerializer},
+        responses={
+            200: ProfileResponseSerializer,
+            401: APIErrorSerializer,
+            403: APIErrorSerializer,
+            404: APIErrorSerializer,
+        },
         tags=["1. Auth & User Management"],
         summary="[ADMIN] Khóa hoặc mở khóa tài khoản sinh viên",
     )
@@ -145,6 +167,10 @@ class AdminUserToggleStatusAPIView(APIView):
         if not target_user:
             raise ResourceNotFoundException(
                 f"Không tìm thấy người dùng với ID={user_id}."
+            )
+        if target_user.role != UserAccount.Role.STUDENT:
+            raise AccessDeniedException(
+                "API này chỉ cho phép khóa hoặc mở khóa tài khoản sinh viên."
             )
         target_user.is_active = not target_user.is_active
         target_user.save(update_fields=["is_active", "updated_at"])

@@ -3,7 +3,12 @@ URL Routing for `apps.finance` mounted under `/api/v1/` (30+ RESTful API operati
 """
 from django.urls import path
 from drf_spectacular.utils import extend_schema, extend_schema_view
+from rest_framework_simplejwt.serializers import (
+    TokenObtainPairSerializer,
+    TokenRefreshSerializer,
+)
 from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
+from core.openapi_contract import APIErrorSerializer
 from apps.finance.views import (
     AdminUserManagementAPIView,
     AdminUserToggleStatusAPIView,
@@ -36,11 +41,14 @@ DocumentedTokenObtainPairView = extend_schema_view(
     post=extend_schema(
         tags=["1. Auth & User Management"],
         summary="Đăng nhập nhận JWT access và refresh token",
+        responses={200: TokenObtainPairSerializer, 401: APIErrorSerializer},
     )
 )(TokenObtainPairView)
 DocumentedTokenRefreshView = extend_schema_view(
     post=extend_schema(
-        tags=["1. Auth & User Management"], summary="Làm mới JWT access token"
+        tags=["1. Auth & User Management"],
+        summary="Làm mới JWT access token",
+        responses={200: TokenRefreshSerializer, 401: APIErrorSerializer},
     )
 )(TokenRefreshView)
 

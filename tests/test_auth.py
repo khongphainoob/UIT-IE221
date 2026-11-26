@@ -3,13 +3,143 @@ Unit & Integration Tests for Module 1 (auth_iam):
 Registration, UIT Email Validation, JWT Login, Allowance Update, and Admin RBAC (6 tests).
 """
 import pytest
+from datetime import timedelta
 from django.urls import reverse
 from rest_framework import status
+from rest_framework_simplejwt.tokens import AccessToken
 from apps.finance.models import UserAccount
 
 
 @pytest.mark.django_db
 class TestStudentAuthentication:
+    def test_registration_cannot_choose_admin_role(self, api_client):
+        response = api_client.post(
+            reverse("auth-register"),
+            {
+                "email": "22528888@gm.uit.edu.vn",
+                "student_code": "22528888",
+                "full_name": "Sinh viên mới",
+                "password": "StrongPassword123",
+                "role": "ADMIN",
+                "is_staff": True,
+            },
+            format="json",
+        )
+        assert response.status_code == 201
+        user = UserAccount.objects.get(email="22528888@gm.uit.edu.vn")
+        assert user.role == UserAccount.Role.STUDENT
+        assert user.is_staff is False
+
+    @pytest.mark.parametrize(
+        "changes",
+        [
+            {"student_code": ""},
+            {"student_code": "ABC"},
+            {"password": "123456"},
+        ],
+    )
+    def test_registration_rejects_missing_or_invalid_identity_and_weak_password(
+        self, api_client, changes
+    ):
+        payload = {
+            "email": "22528889@gm.uit.edu.vn",
+            "student_code": "22528889",
+            "full_name": "Sinh viên mới",
+            "password": "StrongPassword123",
+        }
+        payload.update(changes)
+        response = api_client.post(reverse("auth-register"), payload, format="json")
+        assert response.status_code == 400
+        assert response.data["error_code"] == "validation_error"
+        assert not UserAccount.objects.filter(email=payload["email"]).exists()
+
+    def test_profile_cannot_change_own_identity_or_role(self, auth_client, student_user):
+        response = auth_client.patch(
+            reverse("users-me"),
+            {"role": "ADMIN", "email": "other@uit.edu.vn", "student_code": "00000000", "full_name": "Tên mới"},
+            format="json",
+        )
+        assert response.status_code == 200
+        student_user.refresh_from_db()
+        assert student_user.role == UserAccount.Role.STUDENT
+        assert student_user.email == "22520999@gm.uit.edu.vn"
+        assert student_user.student_code == "22520999"
+        assert student_user.full_name == "Tên mới"
+
+    def test_invalid_credentials_and_expired_token_return_401(self, api_client, student_user):
+        bad = api_client.post(
+            reverse("auth-login"),
+            {"email": student_user.email, "password": "wrong"},
+            format="json",
+        )
+        assert bad.status_code == 401
+        assert bad.data["error_code"] == "authentication_failed"
+
+        expired = AccessToken.for_user(student_user)
+        expired.set_exp(lifetime=timedelta(seconds=-1))
+        api_client.credentials(HTTP_AUTHORIZATION=f"Bearer {expired}")
+        response = api_client.get(reverse("users-me"))
+        assert response.status_code == 401
+        assert response.data["error_code"] == "authentication_failed"
+
+    def test_locked_account_cannot_login_or_use_existing_token(self, api_client, student_user):
+        login = api_client.post(
+            reverse("auth-login"),
+            {"email": student_user.email, "password": "Password@123"},
+            format="json",
+        )
+        assert login.status_code == 200
+        student_user.is_active = False
+        student_user.save(update_fields=["is_active"])
+        rejected = api_client.post(
+            reverse("auth-login"),
+            {"email": student_user.email, "password": "Password@123"},
+            format="json",
+        )
+        assert rejected.status_code == 401
+        assert rejected.data["error_code"] == "authentication_failed"
+        api_client.credentials(HTTP_AUTHORIZATION=f"Bearer {login.data['access']}")
+        blocked_profile = api_client.get(reverse("users-me"))
+        assert blocked_profile.status_code == 401
+        assert blocked_profile.data["error_code"] == "authentication_failed"
+        api_client.credentials()
+        blocked_refresh = api_client.post(
+            reverse("auth-token-refresh"), {"refresh": login.data["refresh"]}, format="json"
+        )
+        assert blocked_refresh.status_code == 401
+        assert blocked_refresh.data["error_code"] == "authentication_failed"
+
+    def test_student_profile_is_scoped_to_access_token_user(self, api_client, student_user):
+        another = UserAccount.objects.create_user(
+            email="22521111@gm.uit.edu.vn",
+            password="Password@123",
+            student_code="22521111",
+            full_name="Sinh viên khác",
+        )
+        login = api_client.post(
+            reverse("auth-login"),
+            {"email": student_user.email, "password": "Password@123"},
+            format="json",
+        )
+        api_client.credentials(HTTP_AUTHORIZATION=f"Bearer {login.data['access']}")
+        response = api_client.get(reverse("users-me"), {"user_id": str(another.id)})
+        assert response.status_code == 200
+        assert response.data["data"]["id"] == str(student_user.id)
+        assert response.data["data"]["email"] != another.email
+
+    def test_admin_cannot_toggle_another_admin(self, api_client):
+        admin = UserAccount.objects.create_superuser(
+            email="first-admin@uit.edu.vn", password="AdminPassword123", full_name="Admin 1"
+        )
+        other = UserAccount.objects.create_superuser(
+            email="second-admin@uit.edu.vn", password="AdminPassword123", full_name="Admin 2"
+        )
+        api_client.force_authenticate(user=admin)
+        response = api_client.patch(reverse("admin-users-toggle-status", kwargs={"user_id": other.id}))
+        assert response.status_code == 403
+        other.refresh_from_db()
+        assert other.is_active is True
+
     def test_register_valid_uit_email(self, api_client):
         payload = {
             "email": "22521234@gm.uit.edu.vn",

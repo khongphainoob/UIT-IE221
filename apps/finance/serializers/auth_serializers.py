@@ -2,6 +2,8 @@
 Authentication & User Account Serializers (DRF JSON Template Layer).
 """
 from decimal import Decimal
+from django.contrib.auth.password_validation import validate_password
+from django.core.exceptions import ValidationError as DjangoValidationError
 from rest_framework import serializers
 from apps.finance.models import UserAccount
 
@@ -27,6 +29,26 @@ class StudentRegistrationSerializer(serializers.ModelSerializer):
             "created_at",
         ]
         read_only_fields = ["id", "role", "created_at"]
+        extra_kwargs = {
+            "student_code": {"required": True, "allow_blank": False, "allow_null": False},
+        }
+
+    def validate_student_code(self, value):
+        if not (len(value) == 8 and value.isdecimal()):
+            raise serializers.ValidationError("MSSV phải gồm đúng 8 chữ số.")
+        return value
+
+    def validate(self, attrs):
+        student = UserAccount(
+            email=attrs.get("email", ""),
+            student_code=attrs.get("student_code"),
+            full_name=attrs.get("full_name", ""),
+        )
+        try:
+            validate_password(attrs["password"], user=student)
+        except DjangoValidationError as exc:
+            raise serializers.ValidationError({"password": exc.messages}) from exc
+        return attrs
 
     def create(self, validated_data):
         password = validated_data.pop("password")
@@ -49,7 +71,9 @@ class UserProfileSerializer(serializers.ModelSerializer):
             "is_active",
             "created_at",
         ]
-        read_only_fields = ["id", "email", "role", "is_active", "created_at"]
+        read_only_fields = [
+            "id", "email", "student_code", "role", "is_active", "created_at"
+        ]
 
 
 class UserAllowanceUpdateSerializer(serializers.ModelSerializer):
@@ -66,3 +90,32 @@ class UserAllowanceUpdateSerializer(serializers.ModelSerializer):
     class Meta:
         model = UserAccount
         fields = ["monthly_income_limit", "dorm_area", "full_name"]
+
+
+class RegistrationResponseSerializer(serializers.Serializer):
+    success = serializers.BooleanField(default=True)
+    data = StudentRegistrationSerializer()
+
+
+class ProfileResponseSerializer(serializers.Serializer):
+    success = serializers.BooleanField(default=True)
+    data = UserProfileSerializer()
+
+
+class AdminStatisticsSerializer(serializers.Serializer):
+    total_users = serializers.IntegerField()
+    total_students = serializers.IntegerField()
+    total_wallets = serializers.IntegerField()
+    total_transactions = serializers.IntegerField()
+    total_anomaly_transactions = serializers.IntegerField()
+    total_system_balance = serializers.FloatField()
+
+
+class AdminUsersDataSerializer(serializers.Serializer):
+    system_statistics = AdminStatisticsSerializer()
+    users = UserProfileSerializer(many=True)
+
+
+class AdminUsersResponseSerializer(serializers.Serializer):
+    success = serializers.BooleanField(default=True)
+    data = AdminUsersDataSerializer()
