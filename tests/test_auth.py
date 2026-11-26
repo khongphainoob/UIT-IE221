@@ -97,12 +97,35 @@ class TestStudentAuthentication:
             format="json",
         )
         assert rejected.status_code == 401
+        assert rejected.data["error_code"] == "authentication_failed"
         api_client.credentials(HTTP_AUTHORIZATION=f"Bearer {login.data['access']}")
-        assert api_client.get(reverse("users-me")).status_code == 401
+        blocked_profile = api_client.get(reverse("users-me"))
+        assert blocked_profile.status_code == 401
+        assert blocked_profile.data["error_code"] == "authentication_failed"
         api_client.credentials()
-        assert api_client.post(
+        blocked_refresh = api_client.post(
             reverse("auth-token-refresh"), {"refresh": login.data["refresh"]}, format="json"
-        ).status_code == 401
+        )
+        assert blocked_refresh.status_code == 401
+        assert blocked_refresh.data["error_code"] == "authentication_failed"
+
+    def test_student_profile_is_scoped_to_access_token_user(self, api_client, student_user):
+        another = UserAccount.objects.create_user(
+            email="22521111@gm.uit.edu.vn",
+            password="Password@123",
+            student_code="22521111",
+            full_name="Sinh viên khác",
+        )
+        login = api_client.post(
+            reverse("auth-login"),
+            {"email": student_user.email, "password": "Password@123"},
+            format="json",
+        )
+        api_client.credentials(HTTP_AUTHORIZATION=f"Bearer {login.data['access']}")
+        response = api_client.get(reverse("users-me"), {"user_id": str(another.id)})
+        assert response.status_code == 200
+        assert response.data["data"]["id"] == str(student_user.id)
+        assert response.data["data"]["email"] != another.email
 
     def test_admin_cannot_toggle_another_admin(self, api_client):
         admin = UserAccount.objects.create_superuser(

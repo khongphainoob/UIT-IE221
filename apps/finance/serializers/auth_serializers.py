@@ -90,3 +90,32 @@ class UserAllowanceUpdateSerializer(serializers.ModelSerializer):
     class Meta:
         model = UserAccount
         fields = ["monthly_income_limit", "dorm_area", "full_name"]
+
+
+class RegistrationResponseSerializer(serializers.Serializer):
+    success = serializers.BooleanField(default=True)
+    data = StudentRegistrationSerializer()
+
+
+class ProfileResponseSerializer(serializers.Serializer):
+    success = serializers.BooleanField(default=True)
+    data = UserProfileSerializer()
+
+
+class AdminStatisticsSerializer(serializers.Serializer):
+    total_users = serializers.IntegerField()
+    total_students = serializers.IntegerField()
+    total_wallets = serializers.IntegerField()
+    total_transactions = serializers.IntegerField()
+    total_anomaly_transactions = serializers.IntegerField()
+    total_system_balance = serializers.FloatField()
+
+
+class AdminUsersDataSerializer(serializers.Serializer):
+    system_statistics = AdminStatisticsSerializer()
+    users = UserProfileSerializer(many=True)
+
+
+class AdminUsersResponseSerializer(serializers.Serializer):
+    success = serializers.BooleanField(default=True)
+    data = AdminUsersDataSerializer()
