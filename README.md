@@ -174,6 +174,9 @@ docker compose up -d db
 
 ### Các Đường dẫn Truy cập khi Server chạy:
 - **Swagger UI (30+ RESTful APIs)**: http://127.0.0.1:8000/api/schema/swagger/
+- **OpenAPI schema (JSON/YAML)**: http://127.0.0.1:8000/api/schema/
+- **Thử API có JWT trong Swagger**: gọi `POST /api/v1/auth/login/` bằng email và mật khẩu, sao chép trường `access`, nhấn **Authorize** ở góc trên Swagger, nhập access token rồi gọi `GET /api/v1/wallets/`. Swagger dùng HTTP Bearer; không thêm chữ `Bearer` vào ô token. Token hết hạn có thể làm mới qua `POST /api/v1/auth/token/refresh/`.
+- Quy ước request, response và mã lỗi: [docs/api_contract.md](docs/api_contract.md).
 - **Hybrid MVT Web Dashboard (Chart.js)**: http://127.0.0.1:8000/dashboard/ *(hỗ trợ `?student=24520001` .. `?student=24520006`)*
 - **ReDoc**: http://127.0.0.1:8000/api/schema/redoc/
 - **Tài khoản Demo nội bộ sau khi chạy `seed_data`** *(chỉ dùng cho môi trường dev/demo)*:

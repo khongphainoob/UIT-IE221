@@ -59,3 +59,17 @@ class WalletTransferSerializer(serializers.Serializer):
         default="",
         help_text="Ghi chú chuyển khoản",
     )
+
+
+class WalletListResponseSerializer(serializers.Serializer):
+    """Response thực tế của GET /wallets/."""
+
+    success = serializers.BooleanField(default=True)
+    data = WalletSerializer(many=True)
+
+
+class WalletCreateResponseSerializer(serializers.Serializer):
+    """Response thực tế của POST /wallets/."""
+
+    success = serializers.BooleanField(default=True)
+    data = WalletSerializer()

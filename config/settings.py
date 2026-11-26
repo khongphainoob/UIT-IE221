@@ -194,5 +194,12 @@ SPECTACULAR_SETTINGS = {
     "VERSION": "1.0.0",
     "SERVE_INCLUDE_SCHEMA": False,
     "COMPONENT_SPLIT_REQUEST": True,
+    "TAGS": [
+        {"name": "1. Auth & User Management", "description": "Đăng ký, JWT, hồ sơ và quản trị người dùng."},
+        {"name": "2. Wallets", "description": "Quản lý ví và chuyển tiền nội bộ."},
+        {"name": "3. Categories, Transactions & Recurring Bills", "description": "Danh mục, giao dịch và hóa đơn định kỳ."},
+        {"name": "4. Budgets & Alerts", "description": "Ngân sách tháng và cảnh báo."},
+        {"name": "5. Analytics & ML Serving Engine", "description": "Phân tích, dự báo và xuất báo cáo."},
+    ],
 }
 
