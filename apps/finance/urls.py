@@ -2,6 +2,7 @@
 URL Routing for `apps.finance` mounted under `/api/v1/` (30+ RESTful API operations across 5 Modules).
 """
 from django.urls import path
+from drf_spectacular.utils import extend_schema, extend_schema_view
 from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
 from apps.finance.views import (
     AdminUserManagementAPIView,
@@ -31,14 +32,30 @@ from apps.finance.views import (
     WalletTransferAPIView,
 )
 
+DocumentedTokenObtainPairView = extend_schema_view(
+    post=extend_schema(
+        tags=["1. Auth & User Management"],
+        summary="Đăng nhập nhận JWT access và refresh token",
+    )
+)(TokenObtainPairView)
+DocumentedTokenRefreshView = extend_schema_view(
+    post=extend_schema(
+        tags=["1. Auth & User Management"], summary="Làm mới JWT access token"
+    )
+)(TokenRefreshView)
+
 urlpatterns = [
     # =========================================================================
     # MODULE 1: auth_iam (Authentication, User Profile, Allowance & Admin - 6+ APIs)
     # =========================================================================
     path("auth/register/", StudentRegistrationAPIView.as_view(), name="auth-register"),
-    path("auth/login/", TokenObtainPairView.as_view(), name="auth-login"),
-    path("auth/token/refresh/", TokenRefreshView.as_view(), name="auth-token-refresh"),
-    path("auth/refresh/", TokenRefreshView.as_view(), name="auth-refresh"),
+    path("auth/login/", DocumentedTokenObtainPairView.as_view(), name="auth-login"),
+    path(
+        "auth/token/refresh/",
+        DocumentedTokenRefreshView.as_view(),
+        name="auth-token-refresh",
+    ),
+    path("auth/refresh/", DocumentedTokenRefreshView.as_view(), name="auth-refresh"),
     path("users/me/", UserProfileAPIView.as_view(), name="users-me"),
     path("auth/me/", UserProfileAPIView.as_view(), name="auth-me"),
     path(

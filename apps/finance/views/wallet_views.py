@@ -8,7 +8,12 @@ from rest_framework import status
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from apps.finance.serializers import WalletSerializer, WalletTransferSerializer
+from apps.finance.serializers.wallet_serializers import (
+    WalletCreateResponseSerializer,
+    WalletListResponseSerializer,
+)
 from apps.finance.services import WalletService
+from core.openapi_contract import APIErrorSerializer
 from core.permissions import IsStudentOwner
 
 
@@ -19,7 +24,8 @@ class WalletListCreateAPIView(APIView):
     wallet_service = WalletService()
 
     @extend_schema(
-        responses={200: WalletSerializer(many=True)},
+        operation_id="wallet_list",
+        responses={200: WalletListResponseSerializer, 401: APIErrorSerializer},
         tags=["2. Wallets"],
         summary="Danh sách ví tiền của sinh viên",
     )
@@ -30,7 +36,11 @@ class WalletListCreateAPIView(APIView):
 
     @extend_schema(
         request=WalletSerializer,
-        responses={201: WalletSerializer},
+        responses={
+            201: WalletCreateResponseSerializer,
+            400: APIErrorSerializer,
+            401: APIErrorSerializer,
+        },
         tags=["2. Wallets"],
         summary="Tạo ví tiền mới (Tiền mặt, MoMo, Ngân hàng)",
     )
